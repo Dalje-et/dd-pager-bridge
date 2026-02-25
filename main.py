@@ -112,7 +112,16 @@ def _dd_resolve(alert_id: str):
 
 
 def start_mqtt():
+    """Create and connect MQTT client. Safe to call multiple times."""
     global mqtt_client
+    # Stop existing client if any
+    if mqtt_client:
+        try:
+            mqtt_client.loop_stop()
+            mqtt_client.disconnect()
+        except Exception:
+            pass
+
     mqtt_client = mqtt.Client(
         mqtt.CallbackAPIVersion.VERSION2, client_id=f"dd-pager-bridge-{DEVICE_ID}"
     )
@@ -120,8 +129,25 @@ def start_mqtt():
     mqtt_client.tls_set(tls_version=ssl.PROTOCOL_TLS_CLIENT)
     mqtt_client.on_connect = on_mqtt_connect
     mqtt_client.on_message = on_mqtt_message
+    mqtt_client.reconnect_delay_set(min_delay=1, max_delay=30)
     mqtt_client.connect(MQTT_BROKER, MQTT_PORT)
-    mqtt_client.loop_start()  # background thread
+    mqtt_client.loop_start()
+    log.info("MQTT client started")
+
+
+def ensure_mqtt():
+    """Ensure MQTT is connected, restarting if needed."""
+    if mqtt_client and mqtt_client.is_connected():
+        return
+    log.warning("MQTT not connected, restarting client...")
+    start_mqtt()
+    # Wait briefly for connection
+    import time
+    for _ in range(20):
+        if mqtt_client.is_connected():
+            return
+        time.sleep(0.25)
+    log.error("MQTT reconnect timed out")
 
 
 def stop_mqtt():
@@ -154,14 +180,7 @@ def health():
 
 def publish_to_pager(payload: str):
     """Publish a message to the pager's MQTT topic, reconnecting if needed."""
-    if not mqtt_client.is_connected():
-        log.warning("MQTT not connected, attempting reconnect...")
-        try:
-            mqtt_client.reconnect()
-        except Exception as e:
-            log.error(f"MQTT reconnect failed: {e}")
-            raise
-
+    ensure_mqtt()
     result = mqtt_client.publish(TOPIC_ALERT, payload, qos=1)
     result.wait_for_publish(timeout=10)
 
