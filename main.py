@@ -136,18 +136,28 @@ def start_mqtt():
 
 
 def ensure_mqtt():
-    """Ensure MQTT is connected, restarting if needed."""
+    """Ensure MQTT is connected, restarting if needed. Blocks until connected."""
+    import time
     if mqtt_client and mqtt_client.is_connected():
         return
     log.warning("MQTT not connected, restarting client...")
-    start_mqtt()
-    # Wait briefly for connection
-    import time
-    for _ in range(20):
-        if mqtt_client.is_connected():
+    try:
+        start_mqtt()
+    except Exception as e:
+        log.error(f"MQTT start failed: {e}, retrying...")
+        time.sleep(1)
+        try:
+            start_mqtt()
+        except Exception as e2:
+            log.error(f"MQTT retry failed: {e2}")
+            raise
+    # Wait up to 10 seconds for connection
+    for _ in range(40):
+        if mqtt_client and mqtt_client.is_connected():
+            log.info("MQTT reconnected successfully")
             return
         time.sleep(0.25)
-    log.error("MQTT reconnect timed out")
+    raise RuntimeError("MQTT reconnect timed out after 10s")
 
 
 def stop_mqtt():
@@ -192,11 +202,14 @@ async def webhook(request: Request):
     Extracts alert info and publishes to MQTT for the pager.
     """
     try:
-        body = await request.json()
+        return await _handle_webhook(request)
     except Exception as e:
-        log.error(f"Failed to parse webhook body: {e}")
-        return {"status": "error", "detail": "invalid JSON"}
+        log.error(f"Webhook unhandled error: {e}", exc_info=True)
+        return {"status": "error", "detail": str(e)}
 
+
+async def _handle_webhook(request: Request):
+    body = await request.json()
     log.info(f"Webhook received: {json.dumps(body)[:500]}")
 
     # Extract alert details from DD On-Call webhook payload
