@@ -152,6 +152,20 @@ def health():
     }
 
 
+def publish_to_pager(payload: str):
+    """Publish a message to the pager's MQTT topic, reconnecting if needed."""
+    if not mqtt_client.is_connected():
+        log.warning("MQTT not connected, attempting reconnect...")
+        try:
+            mqtt_client.reconnect()
+        except Exception as e:
+            log.error(f"MQTT reconnect failed: {e}")
+            raise
+
+    result = mqtt_client.publish(TOPIC_ALERT, payload, qos=1)
+    result.wait_for_publish(timeout=10)
+
+
 @app.post("/webhook")
 async def webhook(request: Request):
     """
@@ -188,8 +202,7 @@ async def webhook(request: Request):
 
     log.info(f"Publishing to {TOPIC_ALERT}: {payload}")
     try:
-        result = mqtt_client.publish(TOPIC_ALERT, payload, qos=1)
-        result.wait_for_publish(timeout=5)
+        publish_to_pager(payload)
     except Exception as e:
         log.error(f"MQTT publish failed: {e}")
         return {"status": "error", "detail": f"MQTT publish failed: {e}"}
@@ -209,8 +222,11 @@ async def test_alert():
     })
 
     log.info(f"Test alert → {TOPIC_ALERT}: {payload}")
-    result = mqtt_client.publish(TOPIC_ALERT, payload, qos=1)
-    result.wait_for_publish(timeout=5)
+    try:
+        publish_to_pager(payload)
+    except Exception as e:
+        log.error(f"MQTT publish failed: {e}")
+        return {"status": "error", "detail": f"MQTT publish failed: {e}"}
 
     return {"status": "sent", "alert_id": alert_id}
 
