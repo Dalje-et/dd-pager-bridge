@@ -158,7 +158,12 @@ async def webhook(request: Request):
     Receives Datadog On-Call webhook.
     Extracts alert info and publishes to MQTT for the pager.
     """
-    body = await request.json()
+    try:
+        body = await request.json()
+    except Exception as e:
+        log.error(f"Failed to parse webhook body: {e}")
+        return {"status": "error", "detail": "invalid JSON"}
+
     log.info(f"Webhook received: {json.dumps(body)[:500]}")
 
     # Extract alert details from DD On-Call webhook payload
@@ -182,8 +187,12 @@ async def webhook(request: Request):
     })
 
     log.info(f"Publishing to {TOPIC_ALERT}: {payload}")
-    result = mqtt_client.publish(TOPIC_ALERT, payload, qos=1)
-    result.wait_for_publish(timeout=5)
+    try:
+        result = mqtt_client.publish(TOPIC_ALERT, payload, qos=1)
+        result.wait_for_publish(timeout=5)
+    except Exception as e:
+        log.error(f"MQTT publish failed: {e}")
+        return {"status": "error", "detail": f"MQTT publish failed: {e}"}
 
     return {"status": "published", "alert_id": alert_id}
 
