@@ -191,8 +191,8 @@ def health():
 def publish_to_pager(payload: str):
     """Publish a message to the pager's MQTT topic, reconnecting if needed."""
     ensure_mqtt()
-    result = mqtt_client.publish(TOPIC_ALERT, payload, qos=1)
-    result.wait_for_publish(timeout=10)
+    mqtt_client.publish(TOPIC_ALERT, payload, qos=1)
+    # Fire-and-forget: paho queues QoS 1 messages and delivers when connected
 
 
 @app.post("/webhook")
