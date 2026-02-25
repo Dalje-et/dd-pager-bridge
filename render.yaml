@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: dd-pager-bridge
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: MQTT_BROKER
+        sync: false
+      - key: MQTT_PORT
+        value: "8883"
+      - key: MQTT_USER
+        sync: false
+      - key: MQTT_PASS
+        sync: false
+      - key: DD_API_KEY
+        sync: false
+      - key: DD_APP_KEY
+        sync: false
+      - key: DD_SITE
+        value: datadoghq.com
+      - key: DEVICE_ID
+        value: ddpager-poc-001
+    healthCheckPath: /health
