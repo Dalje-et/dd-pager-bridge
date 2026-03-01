@@ -52,6 +52,16 @@ DD_SITE = os.environ.get("DD_SITE", "datadoghq.com")
 BRIDGE_URL = os.environ.get("BRIDGE_URL", "https://dd-pager-bridge.onrender.com")
 DEVICE_ID = os.environ.get("DEVICE_ID", "ddpager-poc-001")
 
+# On-Call API base URLs per DD site (different from main API)
+ONCALL_API_URLS = {
+    "datadoghq.com": "https://navy.oncall.datadoghq.com",
+    "us3.datadoghq.com": "https://navy.oncall.us3.datadoghq.com",
+    "us5.datadoghq.com": "https://navy.oncall.us5.datadoghq.com",
+    "datadoghq.eu": "https://navy.oncall.datadoghq.eu",
+    "ap1.datadoghq.com": "https://navy.oncall.ap1.datadoghq.com",
+    "ddog-gov.com": "https://navy.oncall.ddog-gov.com",
+}
+
 # --- SQLite database for device credentials ---
 DB_PATH = os.environ.get("DB_PATH", "./pager_bridge.db")
 
@@ -163,7 +173,9 @@ def _dd_api_call(device_id: str, alert_id: str, action: str):
         return
 
     headers, site = result
-    url = f"https://api.{site}/api/v2/on-call/pages/{alert_id}/{action}"
+    # On-Call API uses a different base URL than the main DD API
+    oncall_base = ONCALL_API_URLS.get(site, f"https://navy.oncall.{site}")
+    url = f"{oncall_base}/api/v2/on-call/pages/{alert_id}/{action}"
     try:
         resp = httpx.post(url, headers=headers, json={}, timeout=10)
         log.info(f"DD {action} for {device_id}: {resp.status_code} {resp.text[:200]}")
