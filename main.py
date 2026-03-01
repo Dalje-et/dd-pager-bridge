@@ -260,6 +260,11 @@ app = FastAPI(title="Datadog Pager Bridge", lifespan=lifespan)
 
 @app.get("/health")
 def health():
+    # Ensure MQTT stays connected — synthetic tests hitting /health keep it alive
+    try:
+        ensure_mqtt()
+    except Exception as e:
+        log.error(f"Health check MQTT reconnect failed: {e}")
     return {
         "status": "ok",
         "mqtt_connected": mqtt_client.is_connected() if mqtt_client else False,
