@@ -55,8 +55,8 @@ DEVICE_ID = os.environ.get("DEVICE_ID", "ddpager-poc-001")
 # On-Call API base URLs per DD site (each site has a unique color-coded subdomain)
 # See: https://docs.datadoghq.com/api/latest/on-call-paging/
 ONCALL_API_URLS = {
-    "datadoghq.com": "https://saffron.oncall.datadoghq.com",
-    "us3.datadoghq.com": "https://navy.oncall.datadoghq.com",
+    "datadoghq.com": "https://navy.oncall.datadoghq.com",
+    "us3.datadoghq.com": "https://saffron.oncall.datadoghq.com",
     "us5.datadoghq.com": "https://lava.oncall.datadoghq.com",
     "datadoghq.eu": "https://beige.oncall.datadoghq.eu",
     "ap1.datadoghq.com": "https://teal.oncall.datadoghq.com",
