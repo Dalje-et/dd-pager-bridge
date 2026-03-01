@@ -19,6 +19,8 @@ services:
         sync: false
       - key: DD_SITE
         value: datadoghq.com
+      - key: BRIDGE_URL
+        value: https://dd-pager-bridge.onrender.com
       - key: DEVICE_ID
         value: ddpager-poc-001
     healthCheckPath: /health
